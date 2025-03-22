@@ -1,0 +1,2 @@
+# AnimeWisdomVault
+Anime Wisdom Vault
