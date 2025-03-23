@@ -8,31 +8,36 @@ from firebase_admin import credentials, firestore
 st.set_page_config(page_title="AnimeWisdomVault", layout="centered")
 
 # ==== CONFIG ====
-SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1s-FATTwfzFUS2gdAjbjNrCKUg1GeCWnhzdzDYLea8Zc/export?format=csv"
 import os
 
-FIREBASE_CRED_PATH = (
-    "/etc/secrets/firebase-service-account.json"
-    if os.environ.get("RENDER")
-    else "secrets/firebase-service-account.json"
-)
 FIREBASE_COLLECTION = "anime_quotes"
 
 # ==== INIT FIREBASE ====
 @st.cache_resource
 def init_firebase():
-    cred = credentials.Certificate(FIREBASE_CRED_PATH)
+    if "FIREBASE" in st.secrets:
+        fb = st.secrets["FIREBASE"]
+        cert_dict = {
+            k: v.replace("\\n", "\n") if isinstance(v, str) and "PRIVATE KEY" in v.upper() else v
+            for k, v in fb.items()
+        }
+        cred = credentials.Certificate(cert_dict)
+    elif os.path.exists("/etc/secrets/firebase-service-account.json"):
+        cred = credentials.Certificate("/etc/secrets/firebase-service-account.json")
+    else:
+        raise Exception("No Firebase credentials found!")
+
     firebase_admin.initialize_app(cred)
     return firestore.client()
 
 db = init_firebase()
 
 # ==== LOAD GOOGLE SHEET ====
-@st.cache_data
-def load_quotes_from_google_sheet():
-    df = pd.read_csv(SHEET_CSV_URL)
-    df.dropna(subset=["Quote"], inplace=True)
-    return df
+# @st.cache_data
+# def load_quotes_from_google_sheet():
+#     df = pd.read_csv(SHEET_CSV_URL)
+#     df.dropna(subset=["Quote"], inplace=True)
+#     return df
 
 # ==== LOAD FROM FIRESTORE ====
 @st.cache_data
